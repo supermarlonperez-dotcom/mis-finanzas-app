@@ -1,7 +1,7 @@
 (function(){
   "use strict";
 
-  // ---------- icon system: one consistent line-icon style, 20x20 viewBox ----------
+  // ---------- icon system ----------
   var ICON_PATHS = {
     wallet: '<path d="M3 6.5A1.5 1.5 0 014.5 5h10A1.5 1.5 0 0116 6.5V15a1.5 1.5 0 01-1.5 1.5h-10A1.5 1.5 0 013 15V6.5z"/><path d="M3 8h13.5a1 1 0 011 1v2.4a1 1 0 01-1 1H14a1.7 1.7 0 010-3.4h2.5"/>',
     chart: '<path d="M4 15.5V9.5M9.5 15.5V4.5M15 15.5v-5"/><path d="M2.5 17.5h15"/>',
@@ -72,6 +72,12 @@
     var sign = v < 0 ? '-' : '';
     return sign + '$' + new Intl.NumberFormat('es-AR',{maximumFractionDigits:0}).format(Math.abs(v));
   }
+  function fmtShortDate(dateStr){
+    if (!dateStr) return '';
+    var d = new Date(dateStr + 'T00:00:00');
+    var s = d.toLocaleDateString('es-AR', {day:'2-digit', month:'short'});
+    return s.replace('.', '');
+  }
   function todayISO(){ return new Date().toISOString().slice(0,10); }
   function monthKey(dateStr){ return (dateStr||'').slice(0,7); }
   function monthLabel(key){
@@ -84,28 +90,94 @@
     return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
   }
 
+  // ---------- smooth path helper (Catmull-Rom -> cubic bezier) ----------
+  function smoothPath(points){
+    if (points.length < 2) return '';
+    var d = 'M' + points[0].x.toFixed(2) + ',' + points[0].y.toFixed(2);
+    for (var i=0;i<points.length-1;i++){
+      var p0 = points[i-1] || points[i];
+      var p1 = points[i];
+      var p2 = points[i+1];
+      var p3 = points[i+2] || p2;
+      var c1x = p1.x + (p2.x - p0.x)/6, c1y = p1.y + (p2.y - p0.y)/6;
+      var c2x = p2.x - (p3.x - p1.x)/6, c2y = p2.y - (p3.y - p1.y)/6;
+      d += ' C' + c1x.toFixed(2)+','+c1y.toFixed(2)+' '+c2x.toFixed(2)+','+c2y.toFixed(2)+' '+p2.x.toFixed(2)+','+p2.y.toFixed(2);
+    }
+    return d;
+  }
+
+  function sparkline(values, colorVar, w, h){
+    w = w || 108; h = h || 34;
+    if (!values.length) return '';
+    var max = Math.max.apply(null, values), min = Math.min.apply(null, values);
+    if (max === min){ max += 1; min -= 1; }
+    var pad = 3;
+    var pts = values.map(function(v,i){
+      return { x: pad + (i/(values.length-1||1)) * (w-pad*2), y: pad + (1 - (v-min)/(max-min)) * (h-pad*2) };
+    });
+    var line = smoothPath(pts);
+    var area = line + ' L' + pts[pts.length-1].x.toFixed(2)+','+(h-1) + ' L' + pts[0].x.toFixed(2)+','+(h-1) + ' Z';
+    var gid = 'sg' + Math.random().toString(36).slice(2,8);
+    return '<svg width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none">' +
+      '<defs><linearGradient id="'+gid+'" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0%" stop-color="var('+colorVar+')" stop-opacity=".35"/>' +
+      '<stop offset="100%" stop-color="var('+colorVar+')" stop-opacity="0"/></linearGradient></defs>' +
+      '<path d="'+area+'" fill="url(#'+gid+')" stroke="none"></path>' +
+      '<path d="'+line+'" fill="none" stroke="var('+colorVar+')" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>' +
+      '<circle cx="'+pts[pts.length-1].x.toFixed(2)+'" cy="'+pts[pts.length-1].y.toFixed(2)+'" r="2.6" fill="var('+colorVar+')"></circle>' +
+      '</svg>';
+  }
+
   var state = { transactions: [], budgets: {}, goals: [], txType: 'expense', goalType: 'saving' };
 
-  // ---------- brand marks + nav labels ----------
-  document.getElementById('railMark').innerHTML = icon('wallet', 19);
-  document.getElementById('topMark').innerHTML = icon('wallet', 19);
-  document.getElementById('iconIncome').innerHTML = icon('trendUp', 15);
-  document.getElementById('iconExpense').innerHTML = icon('trendDown', 15);
-  document.getElementById('iconNet').innerHTML = icon('scale', 15);
+  // ---------- brand + nav labels ----------
+  document.getElementById('navMark').innerHTML = icon('wallet', 18);
+  document.getElementById('heroIcon').innerHTML = icon('wallet', 18);
+  document.getElementById('iconIncome').innerHTML = icon('trendUp', 14);
+  document.getElementById('iconExpense').innerHTML = icon('trendDown', 14);
+  document.getElementById('iconNet').innerHTML = icon('scale', 14);
   document.getElementById('savingsTitle').innerHTML = icon('star', 14) + '<span>Ahorros</span>';
   document.getElementById('debtsTitle').innerHTML = icon('flag', 14) + '<span>Deudas</span>';
+  document.getElementById('qaIncomeIcon').innerHTML = icon('trendUp', 22);
+  document.getElementById('qaExpenseIcon').innerHTML = icon('trendDown', 22);
+  document.getElementById('qaBudgetIcon').innerHTML = icon('target', 22);
+  document.getElementById('qaGoalIcon').innerHTML = icon('flag', 22);
 
-  document.querySelectorAll('#tabs .navlink').forEach(function(btn){
+  document.querySelectorAll('#pillnav button').forEach(function(btn){
     var t = TABS.filter(function(x){ return x.id === btn.dataset.tab; })[0];
-    btn.innerHTML = icon(t.icon, 17) + '<span>' + t.label + '</span>';
+    btn.innerHTML = icon(t.icon, 15) + '<span>' + t.label + '</span>';
+  });
+  document.querySelectorAll('#bottomnav .bn-btn').forEach(function(btn){
+    var t = TABS.filter(function(x){ return x.id === btn.dataset.tab; })[0];
+    btn.innerHTML = icon(t.icon, 19) + '<span>' + t.label + '</span>';
   });
 
-  document.getElementById('tabs').addEventListener('click', function(e){
-    var btn = e.target.closest('.navlink');
-    if(!btn) return;
-    document.querySelectorAll('.navlink').forEach(function(t){ t.classList.toggle('active', t===btn); });
+  function goToTab(tabId){
+    document.querySelectorAll('#pillnav button, #bottomnav .bn-btn').forEach(function(t){
+      t.classList.toggle('active', t.dataset.tab === tabId);
+    });
     document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
-    document.getElementById('view-' + btn.dataset.tab).classList.add('active');
+    document.getElementById('view-' + tabId).classList.add('active');
+  }
+  document.getElementById('pillnav').addEventListener('click', function(e){
+    var btn = e.target.closest('button'); if(!btn) return; goToTab(btn.dataset.tab);
+  });
+  document.getElementById('bottomnav').addEventListener('click', function(e){
+    var btn = e.target.closest('.bn-btn'); if(!btn) return; goToTab(btn.dataset.tab);
+  });
+
+  // ---------- quick actions ----------
+  document.getElementById('quickActions').addEventListener('click', function(e){
+    var btn = e.target.closest('.qa-btn'); if(!btn) return;
+    var qa = btn.dataset.qa;
+    if (qa === 'income' || qa === 'expense'){
+      goToTab('movimientos');
+      var typeBtn = document.querySelector('#txForm .type-toggle button[data-t="'+qa+'"]');
+      if (typeBtn) typeBtn.click();
+      setTimeout(function(){ document.getElementById('txAmount').focus(); }, 50);
+    } else {
+      goToTab(qa);
+    }
   });
 
   // ---------- transaction form ----------
@@ -167,7 +239,17 @@
     });
   });
 
-  // ---------- render: summary ----------
+  // ---------- summary + hero + stat sparklines ----------
+  function last14Days(){
+    var out = [];
+    var d = new Date();
+    for (var i=13;i>=0;i--){
+      var dd = new Date(d.getFullYear(), d.getMonth(), d.getDate()-i);
+      out.push(dd.toISOString().slice(0,10));
+    }
+    return out;
+  }
+
   function computeTotals(){
     var total = 0, monthIncome = 0, monthExpense = 0;
     var curMonth = monthKey(todayISO());
@@ -181,11 +263,23 @@
     return {total:total, monthIncome:monthIncome, monthExpense:monthExpense};
   }
 
+  function lastMonthNet(){
+    var d = new Date(); d.setMonth(d.getMonth()-1);
+    var key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    var inc=0, exp=0;
+    state.transactions.forEach(function(t){
+      if (monthKey(t.date) !== key) return;
+      if (t.type==='income') inc += t.amount; else exp += t.amount;
+    });
+    return inc - exp;
+  }
+
   function renderSummary(){
     var totals = computeTotals();
     var balEl = document.getElementById('totalBalance');
     balEl.textContent = fmt(totals.total);
     balEl.classList.toggle('neg', totals.total < 0);
+
     document.getElementById('statIncome').textContent = fmt(totals.monthIncome);
     document.getElementById('statExpense').textContent = fmt(totals.monthExpense);
     var netEl = document.getElementById('statNet');
@@ -193,15 +287,122 @@
     netEl.textContent = fmt(net);
     netEl.style.color = net >= 0 ? 'var(--positive)' : 'var(--negative)';
 
+    var days = last14Days();
+    var byDayInc = {}, byDayExp = {}, byDayNet = {};
+    days.forEach(function(d){ byDayInc[d]=0; byDayExp[d]=0; });
+    state.transactions.forEach(function(t){
+      if (byDayInc[t.date] === undefined) return;
+      if (t.type==='income') byDayInc[t.date] += t.amount; else byDayExp[t.date] += t.amount;
+    });
+    var cumNet = 0;
+    var netSeries = days.map(function(d){ cumNet += (byDayInc[d]-byDayExp[d]); return cumNet; });
+    document.getElementById('sparkIncome').innerHTML = sparkline(days.map(function(d){return byDayInc[d];}), '--positive');
+    document.getElementById('sparkExpense').innerHTML = sparkline(days.map(function(d){return byDayExp[d];}), '--negative');
+    document.getElementById('sparkNet').innerHTML = sparkline(netSeries, '--accent-2');
+    document.getElementById('heroSpark').innerHTML = sparkline(netSeries, '--accent', 260, 46);
+
+    document.getElementById('heroBalance').textContent = fmt(totals.total);
+    document.getElementById('heroBalance').classList.toggle('neg', totals.total < 0);
+    document.getElementById('heroFlow').textContent = fmt(totals.monthIncome + totals.monthExpense);
+
+    var prevNet = lastMonthNet();
+    var diff = net - prevNet;
+    var changeEl = document.getElementById('heroChange');
+    changeEl.className = diff >= 0 ? 'hero-change pos' : 'hero-change neg';
+    changeEl.innerHTML = (diff >= 0 ? '▲ ' : '▼ ') + fmt(Math.abs(diff)) + ' vs. mes pasado';
+
+    var totalLimit = 0, totalSpent = 0;
+    var curMonth = monthKey(todayISO());
+    var spentByCat = {};
+    state.transactions.forEach(function(t){
+      if (t.type !== 'expense' || monthKey(t.date) !== curMonth) return;
+      spentByCat[t.category] = (spentByCat[t.category]||0) + t.amount;
+    });
+    EXPENSE_CATS.forEach(function(c){
+      var limit = (state.budgets[c.id] && state.budgets[c.id].limit) || 0;
+      if (limit > 0){ totalLimit += limit; totalSpent += (spentByCat[c.id]||0); }
+    });
+    var heroPct = totalLimit > 0 ? Math.min(100, Math.round(totalSpent/totalLimit*100)) : 0;
+    document.getElementById('heroBudgetPct').textContent = heroPct + '%';
+    document.getElementById('heroBudgetBar').style.width = heroPct + '%';
+
+    renderTrend();
     renderDonut();
-    renderBars();
+    renderRing(totalSpent, totalLimit);
+    renderGoalsMini();
     renderRecent();
   }
 
   function emptyState(iconName, title, sub){
-    return '<div class="empty">'+icon(iconName,28)+'<strong>'+title+'</strong><span>'+sub+'</span></div>';
+    return '<div class="empty">'+icon(iconName,26)+'<strong>'+title+'</strong><span>'+sub+'</span></div>';
   }
 
+  // ---------- trend chart (smooth dual area) ----------
+  function last6Months(){
+    var out = [];
+    var d = new Date(); d.setDate(1);
+    for (var i=5;i>=0;i--){
+      var dd = new Date(d.getFullYear(), d.getMonth()-i, 1);
+      out.push(dd.getFullYear() + '-' + String(dd.getMonth()+1).padStart(2,'0'));
+    }
+    return out;
+  }
+
+  function renderTrend(){
+    var months = last6Months();
+    var data = months.map(function(k){
+      var inc=0, exp=0;
+      state.transactions.forEach(function(t){
+        if (monthKey(t.date) !== k) return;
+        if (t.type==='income') inc += t.amount; else exp += t.amount;
+      });
+      return {key:k, label: monthLabel(k), inc:inc, exp:exp};
+    });
+    var wrap = document.getElementById('trendWrap');
+    var hasAny = data.some(function(d){ return d.inc>0 || d.exp>0; });
+    if (!hasAny){
+      wrap.innerHTML = emptyState('exchange', 'Todavía no hay movimientos', 'La tendencia aparece apenas cargues el primero.');
+      return;
+    }
+    var w = 640, h = 210, padT = 14, padB = 26, padX = 8;
+    var maxVal = Math.max.apply(null, data.map(function(d){ return Math.max(d.inc, d.exp); })) || 1;
+    var chartH = h - padT - padB;
+    var stepX = (w - padX*2) / (data.length-1 || 1);
+    function toPts(key){
+      return data.map(function(d,i){ return { x: padX + i*stepX, y: padT + chartH - (d[key]/maxVal)*chartH }; });
+    }
+    var incPts = toPts('inc'), expPts = toPts('exp');
+    var incLine = smoothPath(incPts), expLine = smoothPath(expPts);
+    var incArea = incLine + ' L'+incPts[incPts.length-1].x.toFixed(2)+','+(padT+chartH) + ' L'+incPts[0].x.toFixed(2)+','+(padT+chartH)+' Z';
+    var expArea = expLine + ' L'+expPts[expPts.length-1].x.toFixed(2)+','+(padT+chartH) + ' L'+expPts[0].x.toFixed(2)+','+(padT+chartH)+' Z';
+    var labels = data.map(function(d,i){
+      return '<text x="'+(padX+i*stepX).toFixed(1)+'" y="'+(h-6)+'" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="11" fill="var(--ink-soft)">'+d.label+'</text>';
+    }).join('');
+    var grid = [0.25,0.5,0.75].map(function(f){
+      var y = padT + chartH*f;
+      return '<line x1="'+padX+'" y1="'+y.toFixed(1)+'" x2="'+(w-padX)+'" y2="'+y.toFixed(1)+'" stroke="var(--border-soft)" stroke-width="1"></line>';
+    }).join('');
+    var dots = incPts.map(function(p){ return '<circle cx="'+p.x.toFixed(2)+'" cy="'+p.y.toFixed(2)+'" r="2.6" fill="var(--accent)"></circle>'; }).join('') +
+      expPts.map(function(p){ return '<circle cx="'+p.x.toFixed(2)+'" cy="'+p.y.toFixed(2)+'" r="2.6" fill="var(--accent-4)"></circle>'; }).join('');
+    var svg = '<svg viewBox="0 0 '+w+' '+h+'" width="100%" height="'+h+'" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Ingresos y gastos por mes">' +
+      '<defs>' +
+      '<linearGradient id="tgInc" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent)" stop-opacity=".28"/><stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/></linearGradient>' +
+      '<linearGradient id="tgExp" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--accent-4)" stop-opacity=".22"/><stop offset="100%" stop-color="var(--accent-4)" stop-opacity="0"/></linearGradient>' +
+      '</defs>' +
+      grid +
+      '<path d="'+expArea+'" fill="url(#tgExp)" stroke="none"></path>' +
+      '<path d="'+incArea+'" fill="url(#tgInc)" stroke="none"></path>' +
+      '<path d="'+expLine+'" fill="none" stroke="var(--accent-4)" stroke-width="2.4" stroke-linecap="round"></path>' +
+      '<path d="'+incLine+'" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round"></path>' +
+      dots + labels +
+      '</svg>';
+    var legend = '<div class="trend-legend">' +
+      '<span><span class="legend-dot" style="background:var(--accent); display:inline-block; margin-right:5px;"></span>Ingresos</span>' +
+      '<span><span class="legend-dot" style="background:var(--accent-4); display:inline-block; margin-right:5px;"></span>Gastos</span></div>';
+    wrap.innerHTML = svg + legend;
+  }
+
+  // ---------- donut (expense by category) ----------
   function renderDonut(){
     var curMonth = monthKey(todayISO());
     var byCat = {};
@@ -216,7 +417,7 @@
       return;
     }
     var total = entries.reduce(function(s,e){ return s+e.val; }, 0);
-    var size = 172, r = 63, cx = size/2, cy = size/2, sw = 27;
+    var size = 152, r = 56, cx = size/2, cy = size/2, sw = 24;
     var circumference = 2 * Math.PI * r;
     var offset = 0;
     var paths = entries.map(function(e){
@@ -231,91 +432,78 @@
     var svg = '<svg viewBox="0 0 '+size+' '+size+'" width="'+size+'" height="'+size+'" role="img" aria-label="Gastos por categoría">' +
       '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="var(--surface-2)" stroke-width="'+sw+'"></circle>' +
       paths +
-      '<text x="'+cx+'" y="'+(cy-4)+'" text-anchor="middle" font-family="Work Sans" font-size="10.5" font-weight="600" letter-spacing=".03em" fill="var(--ink-soft)">TOTAL</text>' +
-      '<text x="'+cx+'" y="'+(cy+15)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="14" font-weight="600" fill="var(--ink)">'+fmt(total)+'</text>' +
+      '<text x="'+cx+'" y="'+(cy-3)+'" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="10" font-weight="700" letter-spacing=".03em" fill="var(--ink-soft)">TOTAL</text>' +
+      '<text x="'+cx+'" y="'+(cy+14)+'" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" font-weight="700" fill="var(--ink)">'+fmt(total)+'</text>' +
       '</svg>';
-    var legend = '<div class="legend">' + entries.map(function(e){
+    var legend = '<div class="legend">' + entries.slice(0,5).map(function(e){
       var pct = Math.round(e.val/total*100);
       return '<div class="legend-row"><span class="legend-dot" style="background:var('+catColorVar(e.cat)+')"></span>' +
         '<span class="lg-label">'+catLabel('expense', e.cat)+'</span>' +
-        '<span class="lg-val num">'+fmt(e.val)+' · '+pct+'%</span></div>';
+        '<span class="lg-val num">'+pct+'%</span></div>';
     }).join('') + '</div>';
-    wrap.innerHTML = '<div class="chart-wrap">' + svg + '<div style="flex:1; min-width:180px;">' + legend + '</div></div>';
+    wrap.innerHTML = '<div class="chart-wrap">' + svg + '<div style="flex:1; min-width:140px;">' + legend + '</div></div>';
   }
 
-  function last6Months(){
-    var out = [];
-    var d = new Date();
-    d.setDate(1);
-    for (var i=5;i>=0;i--){
-      var dd = new Date(d.getFullYear(), d.getMonth()-i, 1);
-      var key = dd.getFullYear() + '-' + String(dd.getMonth()+1).padStart(2,'0');
-      out.push(key);
-    }
-    return out;
-  }
-
-  function renderBars(){
-    var months = last6Months();
-    var data = months.map(function(k){
-      var inc=0, exp=0;
-      state.transactions.forEach(function(t){
-        if (monthKey(t.date) !== k) return;
-        if (t.type==='income') inc += t.amount; else exp += t.amount;
-      });
-      return {key:k, label: monthLabel(k), inc:inc, exp:exp};
-    });
-    var wrap = document.getElementById('barWrap');
-    var hasAny = data.some(function(d){ return d.inc>0 || d.exp>0; });
-    if (!hasAny){
-      wrap.innerHTML = emptyState('exchange', 'Todavía no hay movimientos', 'El comparativo mensual aparece apenas cargues el primero.');
+  // ---------- ring (overall budget usage) ----------
+  function renderRing(spent, limit){
+    var wrap = document.getElementById('ringWrap');
+    if (limit <= 0){
+      wrap.innerHTML = emptyState('target', 'Sin presupuestos activos', 'Ponés un límite por categoría en la pestaña Presupuestos.');
       return;
     }
-    var maxVal = Math.max.apply(null, data.map(function(d){ return Math.max(d.inc, d.exp); })) || 1;
-    var w = 620, h = 190, padL = 6, padB = 22, padT = 8;
-    var groupW = (w - padL*2) / data.length;
-    var barW = Math.min(20, groupW*0.32);
-    var chartH = h - padB - padT;
-    var bars = data.map(function(d, i){
-      var gx = padL + i*groupW + groupW/2;
-      var incH = (d.inc/maxVal) * chartH;
-      var expH = (d.exp/maxVal) * chartH;
-      var incX = gx - barW - 2, expX = gx + 2;
-      var incY = padT + (chartH - incH), expY = padT + (chartH - expH);
-      return (
-        '<rect x="'+incX.toFixed(1)+'" y="'+incY.toFixed(1)+'" width="'+barW+'" height="'+Math.max(incH,1).toFixed(1)+'" rx="3" fill="var(--positive)"></rect>' +
-        '<rect x="'+expX.toFixed(1)+'" y="'+expY.toFixed(1)+'" width="'+barW+'" height="'+Math.max(expH,1).toFixed(1)+'" rx="3" fill="var(--negative)"></rect>' +
-        '<text x="'+gx.toFixed(1)+'" y="'+(h-6)+'" text-anchor="middle" font-family="Work Sans" font-size="10.5" fill="var(--ink-soft)">'+d.label+'</text>'
-      );
+    var pct = Math.min(100, Math.round(spent/limit*100));
+    var size = 140, r = 52, cx = size/2, cy = size/2, sw = 16;
+    var circumference = 2*Math.PI*r;
+    var dash = (pct/100)*circumference;
+    var color = pct >= 100 ? 'var(--negative)' : (pct >= 70 ? 'var(--accent-4)' : 'var(--accent)');
+    var svg = '<svg viewBox="0 0 '+size+' '+size+'" width="'+size+'" height="'+size+'">' +
+      '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="var(--surface-2)" stroke-width="'+sw+'"></circle>' +
+      '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="'+sw+'" stroke-linecap="round" ' +
+      'stroke-dasharray="'+dash.toFixed(2)+' '+(circumference-dash).toFixed(2)+'" transform="rotate(-90 '+cx+' '+cy+')"></circle>' +
+      '<text x="'+cx+'" y="'+(cy+6)+'" text-anchor="middle" font-family="Sora" font-size="20" font-weight="700" fill="var(--ink)">'+pct+'%</text>' +
+      '</svg>';
+    var sub = '<div style="text-align:center; margin-top:6px; font-size:12px; color:var(--ink-soft);">'+fmt(spent)+' de '+fmt(limit)+'</div>';
+    wrap.innerHTML = '<div style="display:flex; flex-direction:column; align-items:center;">' + svg + sub + '</div>';
+  }
+
+  // ---------- goals mini (bento) ----------
+  function renderGoalsMini(){
+    var wrap = document.getElementById('goalsMiniWrap');
+    if (!state.goals.length){
+      wrap.innerHTML = emptyState('flag', 'Sin metas todavía', 'Creálas en la pestaña Metas.');
+      return;
+    }
+    var top = state.goals.slice().sort(function(a,b){
+      var pa = a.target>0 ? a.current/a.target : 0, pb = b.target>0 ? b.current/b.target : 0;
+      return pb - pa;
+    }).slice(0,4);
+    wrap.innerHTML = top.map(function(g){
+      var pct = g.target>0 ? Math.min(100, Math.round(g.current/g.target*100)) : 0;
+      return '<div class="mini-goal"><span class="goal-icon '+g.kind+'">'+icon(g.kind==='debt'?'flag':'star',13)+'</span>' +
+        '<div class="mini-goal-body"><div class="name"><span>'+escapeHtml(g.name)+'</span><span>'+pct+'%</span></div>' +
+        '<div class="mini-bar"><div style="width:'+pct+'%; background:'+(g.kind==='debt'?'linear-gradient(90deg, var(--accent-4), #FB7185)':'linear-gradient(90deg, var(--accent), var(--accent-2))')+'"></div></div></div></div>';
     }).join('');
-    var svg = '<svg viewBox="0 0 '+w+' '+h+'" width="100%" height="'+h+'" role="img" aria-label="Ingresos y gastos por mes" preserveAspectRatio="xMidYMid meet">' +
-      '<line x1="0" y1="'+(padT+chartH)+'" x2="'+w+'" y2="'+(padT+chartH)+'" stroke="var(--border)" stroke-width="1"></line>' +
-      bars + '</svg>';
-    var legend = '<div style="display:flex; gap:16px; margin-top:8px; font-size:12.5px; color:var(--ink-soft);">' +
-      '<span><span class="legend-dot" style="background:var(--positive); display:inline-block; margin-right:5px;"></span>Ingresos</span>' +
-      '<span><span class="legend-dot" style="background:var(--negative); display:inline-block; margin-right:5px;"></span>Gastos</span></div>';
-    wrap.innerHTML = svg + legend;
   }
 
   function renderRecent(){
     var sorted = state.transactions.slice().sort(function(a,b){ return (b.date+String(b.createdAt||0)).localeCompare(a.date+String(a.createdAt||0)); });
-    var top = sorted.slice(0,5);
+    var top = sorted.slice(0,6);
     var el = document.getElementById('recentList');
-    if (!top.length){ el.innerHTML = emptyState('wallet', 'Sin movimientos todavía', 'Andá a la pestaña Movimientos para sumar el primero.'); return; }
+    if (!top.length){ el.innerHTML = emptyState('wallet', 'Sin movimientos todavía', 'Usá los botones de arriba para sumar el primero.'); return; }
     el.innerHTML = top.map(function(t){ return txRowHTML(t, false); }).join('');
   }
 
-  // ---------- render: transactions list ----------
+  // ---------- transactions list ----------
   function txRowHTML(t, withDelete){
     var cat = findCat(t.type, t.category);
     var colorVar = catColorVar(t.category);
     var sign = t.type === 'income' ? '+' : '-';
     var delBtn = withDelete ? '<button class="tx-del" data-id="'+t.id+'">Eliminar</button>' : '';
     return '<div class="tx-row">' +
-      '<div class="tx-cat" style="background:var('+colorVar+'); color:#fff;">'+icon(cat.icon,17)+'</div>' +
+      '<div class="tx-cat" style="background:var('+colorVar+')">'+icon(cat.icon,17)+'</div>' +
       '<div class="tx-info"><div class="cat">'+cat.label+'</div>' +
-      '<div class="note">'+(t.note ? escapeHtml(t.note) : t.date)+'</div></div>' +
-      '<div class="tx-amount num '+t.type+'">'+sign+fmt(t.amount)+'</div>' + delBtn + '</div>';
+      '<div class="note">'+(t.note ? escapeHtml(t.note) : '')+'</div></div>' +
+      '<div class="tx-right"><span class="tx-amount num '+t.type+'">'+sign+fmt(t.amount)+'</span><span class="tx-date">'+fmtShortDate(t.date)+'</span></div>' + delBtn + '</div>';
   }
 
   function renderTxList(){
@@ -349,7 +537,7 @@
     }
   });
 
-  // ---------- render: budgets ----------
+  // ---------- budgets ----------
   function renderBudgets(){
     var curMonth = monthKey(todayISO());
     var spentByCat = {};
@@ -364,7 +552,7 @@
       var pct = limit > 0 ? Math.min(100, spent/limit*100) : 0;
       var barColor = 'var(--ink-faint)';
       if (limit > 0){
-        barColor = pct >= 100 ? 'var(--negative)' : (pct >= 70 ? 'var(--accent)' : 'var(--positive)');
+        barColor = pct >= 100 ? 'var(--negative)' : (pct >= 70 ? 'var(--accent-4)' : 'var(--accent)');
       }
       var numsText = limit > 0
         ? fmt(spent) + ' de ' + fmt(limit) + (spent > limit ? ' · superado' : '')
@@ -388,7 +576,7 @@
     Store.set('budgets', catId, {categoryId: catId, limit: val, updatedAt: Date.now()});
   });
 
-  // ---------- render: goals ----------
+  // ---------- goals ----------
   function goalCardHTML(g){
     var pct = g.target > 0 ? Math.min(100, (g.current/g.target)*100) : 0;
     var verb = g.kind === 'debt' ? 'Pagado' : 'Ahorrado';
@@ -461,9 +649,11 @@
     list.forEach(function(d){ map[d.id] = d; });
     state.budgets = map;
     renderBudgets();
+    renderSummary();
   });
   Store.subscribe('goals', function(list){
     state.goals = list;
     renderGoals();
+    renderGoalsMini();
   });
 })();
