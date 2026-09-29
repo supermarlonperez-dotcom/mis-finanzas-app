@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mis Finanzas</title>
+<meta name="description" content="Registrá ingresos y gastos, mirá tus gráficos del mes, armá presupuestos por categoría y seguí tus metas de ahorro y deudas.">
+<meta name="theme-color" content="#B07A22">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --bg:#EEF1EA; --surface:#FFFFFF; --surface-2:#E3E8DF; --border:#D2D9CB;
+  --ink:#16241F; --ink-soft:#57685F; --ink-faint:#8A988E;
+  --accent:#B07A22; --accent-ink:#3E2C0C; --accent-soft:#B07A221A;
+  --positive:#2F7D5A; --positive-soft:#2F7D5A1A; --negative:#B5473A; --negative-soft:#B5473A1A;
+  --chart-1:#B07A22; --chart-2:#2F7D5A; --chart-3:#3E6B8A; --chart-4:#8A4B6B;
+  --chart-5:#B5473A; --chart-6:#6B7F3E; --chart-7:#7A5C99; --chart-8:#4B8A8A; --chart-9:#9C6B3E;
+  --shadow: 0 1px 2px rgba(22,36,31,.07), 0 4px 14px -6px rgba(22,36,31,.10);
+  --shadow-lift: 0 2px 4px rgba(22,36,31,.08), 0 10px 24px -10px rgba(22,36,31,.16);
+  --font-display:'Fraunces',Georgia,serif;
+  --font-body:'Work Sans',system-ui,-apple-system,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1D18; --surface:#172822; --surface-2:#1E322A; --border:#2A3E35;
+    --ink:#E9EDE7; --ink-soft:#AAB9AF; --ink-faint:#728176;
+    --accent:#DCAD5C; --accent-ink:#241905; --accent-soft:#DCAD5C22;
+    --positive:#5FBF8F; --positive-soft:#5FBF8F22; --negative:#E08677; --negative-soft:#E0867722;
+    --chart-1:#DCAD5C; --chart-2:#5FBF8F; --chart-3:#6FA8CB; --chart-4:#C07EA3;
+    --chart-5:#E08677; --chart-6:#A3BC6E; --chart-7:#AD8FD1; --chart-8:#7BC2C2; --chart-9:#C99465;
+    --shadow: 0 1px 2px rgba(0,0,0,.25), 0 4px 14px -6px rgba(0,0,0,.35);
+    --shadow-lift: 0 2px 4px rgba(0,0,0,.3), 0 10px 26px -10px rgba(0,0,0,.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1D18; --surface:#172822; --surface-2:#1E322A; --border:#2A3E35;
+  --ink:#E9EDE7; --ink-soft:#AAB9AF; --ink-faint:#728176;
+  --accent:#DCAD5C; --accent-ink:#241905; --accent-soft:#DCAD5C22;
+  --positive:#5FBF8F; --positive-soft:#5FBF8F22; --negative:#E08677; --negative-soft:#E0867722;
+  --chart-1:#DCAD5C; --chart-2:#5FBF8F; --chart-3:#6FA8CB; --chart-4:#C07EA3;
+  --chart-5:#E08677; --chart-6:#A3BC6E; --chart-7:#AD8FD1; --chart-8:#7BC2C2; --chart-9:#C99465;
+  --shadow: 0 1px 2px rgba(0,0,0,.25), 0 4px 14px -6px rgba(0,0,0,.35);
+  --shadow-lift: 0 2px 4px rgba(0,0,0,.3), 0 10px 26px -10px rgba(0,0,0,.5);
+  color-scheme: dark;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{background:var(--bg); color:var(--ink); font-family:var(--font-body); margin:0; -webkit-font-smoothing:antialiased;}
+h1,h2,h3{font-family:var(--font-display); margin:0; text-wrap:balance;}
+button{font-family:var(--font-body); cursor:pointer;}
+input,select{font-family:var(--font-body);}
+.num{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px;}
+@media (prefers-reduced-motion: no-preference){
+  .view.active{animation:fade-up .28s ease both;}
+  .stat-tile, .card{animation:fade-up .28s ease both;}
+}
+@keyframes fade-up{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+.icon{display:block; flex:none;}
+
+#app{max-width:1180px; margin:0 auto; padding:14px 16px calc(28px + env(safe-area-inset-bottom,0px));}
+.shell{display:block;}
+
+.railhead{display:none;}
+.sidenav{
+  display:flex; gap:4px; overflow-x:auto; padding:4px; margin:0 0 16px; background:var(--surface-2);
+  border-radius:12px; border:1px solid var(--border);
+}
+.navlink{
+  flex:1 0 auto; white-space:nowrap; display:flex; align-items:center; justify-content:center; gap:7px;
+  padding:9px 13px; border:none; background:transparent; color:var(--ink-soft);
+  border-radius:9px; font-size:13.5px; font-weight:600; transition:background .15s ease, color .15s ease;
+}
+.navlink .icon{color:currentColor;}
+.navlink.active{background:var(--surface); color:var(--ink); box-shadow:var(--shadow);}
+.navlink:hover:not(.active){color:var(--ink);}
+
+.topbar{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:6px 4px 16px; flex-wrap:wrap;
+}
+.brand{display:flex; align-items:center; gap:11px;}
+.brand-mark{
+  width:38px; height:38px; border-radius:10px; background:var(--accent); color:var(--accent-ink);
+  display:flex; align-items:center; justify-content:center; flex:none; box-shadow:var(--shadow);
+}
+.brand-text .eyebrow{display:block; font-size:11px; color:var(--ink-soft); letter-spacing:.06em; text-transform:uppercase; font-weight:600;}
+.brand h1{font-size:21px; font-weight:600; letter-spacing:-.01em; line-height:1.1;}
+.balance-chip{text-align:right;}
+.balance-chip .label{display:block; font-size:11.5px; color:var(--ink-soft); letter-spacing:.04em; text-transform:uppercase; font-weight:600;}
+.balance-chip .value{font-family:var(--font-display); font-size:28px; font-weight:600; line-height:1.15;}
+.balance-chip .value.neg{color:var(--negative);}
+
+.view{display:none; flex-direction:column; gap:16px;}
+.view.active{display:flex;}
+
+.card{
+  background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px;
+  box-shadow:var(--shadow);
+}
+.card-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+.card h2{font-size:15.5px; font-weight:600; letter-spacing:.005em;}
+.card .sub{font-size:12.5px; color:var(--ink-soft); margin-top:3px;}
+
+.stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+@media (max-width:640px){ .stat-grid{grid-template-columns:1fr;} }
+.stat-tile{
+  background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:15px 17px;
+  display:flex; flex-direction:column; gap:8px; box-shadow:var(--shadow); min-width:0;
+}
+.stat-top{display:flex; align-items:center; justify-content:space-between; gap:8px;}
+.stat-tile .label{font-size:11.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.05em; font-weight:600;}
+.stat-badge{width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex:none;}
+.stat-tile.income .stat-badge{background:var(--positive-soft); color:var(--positive);}
+.stat-tile.expense .stat-badge{background:var(--negative-soft); color:var(--negative);}
+.stat-tile.net .stat-badge{background:var(--accent-soft); color:var(--accent);}
+.stat-tile .amount{font-family:var(--font-display); font-size:23px; font-weight:600;}
+.stat-tile.income .amount{color:var(--positive);}
+.stat-tile.expense .amount{color:var(--negative);}
+
+.form-row{display:flex; flex-wrap:wrap; gap:10px;}
+.field{display:flex; flex-direction:column; gap:5px; flex:1 1 140px; min-width:0;}
+.field label{font-size:12px; color:var(--ink-soft); font-weight:600;}
+.field input, .field select{
+  background:var(--bg); border:1px solid var(--border); border-radius:9px; padding:9px 10px; color:var(--ink); font-size:14.5px;
+  width:100%; transition:border-color .15s ease;
+}
+.field input:hover, .field select:hover{border-color:var(--ink-faint);}
+.type-toggle{display:flex; border:1px solid var(--border); border-radius:9px; overflow:hidden; flex:1 1 140px; background:var(--bg);}
+.type-toggle button{flex:1; border:none; background:transparent; color:var(--ink-soft); padding:9px 10px; font-size:14px; font-weight:600; transition:background .15s ease, color .15s ease;}
+.type-toggle button.active[data-t="expense"]{background:var(--negative); color:#fff;}
+.type-toggle button.active[data-t="income"]{background:var(--positive); color:#fff;}
+.type-toggle button.active[data-g="saving"]{background:var(--accent); color:var(--accent-ink);}
+.type-toggle button.active[data-g="debt"]{background:var(--negative); color:#fff;}
+.btn{
+  border:none; border-radius:9px; padding:10px 17px; font-size:14px; font-weight:600; background:var(--accent); color:var(--accent-ink);
+  box-shadow:var(--shadow); transition:transform .1s ease, box-shadow .15s ease;
+}
+.btn:hover{box-shadow:var(--shadow-lift);}
+.btn:active{transform:translateY(1px);}
+.btn.ghost{background:transparent; color:var(--ink-soft); border:1px solid var(--border); box-shadow:none;}
+.btn.ghost:hover{color:var(--ink); border-color:var(--ink-faint);}
+.btn:disabled{opacity:.5; cursor:default; box-shadow:none;}
+
+.tx-group + .tx-group{margin-top:16px;}
+.tx-group h3{font-size:12px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.05em; font-family:var(--font-body); font-weight:700; margin-bottom:4px;}
+.tx-row{display:flex; align-items:center; gap:11px; padding:10px 2px; border-top:1px solid var(--border);}
+.tx-row:first-child{border-top:none;}
+.tx-cat{width:36px; height:36px; border-radius:10px; flex:none; display:flex; align-items:center; justify-content:center;}
+.tx-info{flex:1; min-width:0;}
+.tx-info .cat{font-size:14px; font-weight:600;}
+.tx-info .note{font-size:12.5px; color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.tx-amount{font-size:14.5px; font-weight:600; flex:none;}
+.tx-amount.income{color:var(--positive);}
+.tx-amount.expense{color:var(--negative);}
+.tx-del{flex:none; border:none; background:transparent; color:var(--ink-faint); font-size:11.5px; padding:6px 9px; border-radius:7px;}
+.tx-del:hover{color:var(--ink-soft);}
+.tx-del.arm{color:var(--negative); font-weight:700; background:var(--negative-soft);}
+
+.budget-row{padding:13px 0; border-top:1px solid var(--border);}
+.budget-row:first-child{border-top:none;}
+.budget-head{display:flex; align-items:center; gap:10px; margin-bottom:7px;}
+.budget-icon{width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; flex:none; color:#fff;}
+.budget-head .cat{font-size:14px; font-weight:600; flex:1; min-width:0;}
+.budget-head .nums{font-size:12px; color:var(--ink-soft); flex:none;}
+.budget-bar{height:7px; border-radius:5px; background:var(--surface-2); overflow:hidden;}
+.budget-bar > div{height:100%; border-radius:5px; transition:width .25s ease;}
+.budget-edit{display:flex; gap:8px; align-items:center; margin-top:9px;}
+.budget-edit input{width:118px;}
+
+.goal-card{border:1px solid var(--border); border-radius:12px; padding:14px 15px; display:flex; flex-direction:column; gap:9px; background:var(--bg);}
+.goal-top{display:flex; justify-content:space-between; gap:8px; align-items:center;}
+.goal-name-wrap{display:flex; align-items:center; gap:9px; min-width:0;}
+.goal-icon{width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex:none;}
+.goal-icon.saving{background:var(--accent-soft); color:var(--accent);}
+.goal-icon.debt{background:var(--negative-soft); color:var(--negative);}
+.goal-top .name{font-weight:600; font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.goal-top .tag{font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); font-weight:700; flex:none;}
+.goal-nums{font-size:12.5px; color:var(--ink-soft);}
+.goal-bar{height:7px; border-radius:5px; background:var(--surface-2); overflow:hidden;}
+.goal-bar > div{height:100%; border-radius:5px; background:var(--accent); transition:width .25s ease;}
+.goal-card.debt .goal-bar > div{background:var(--negative);}
+.goal-actions{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+.goal-actions input{width:110px;}
+
+.empty{color:var(--ink-soft); font-size:13px; padding:26px 12px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:8px;}
+.empty .icon{color:var(--ink-faint);}
+.empty strong{color:var(--ink); font-size:13.5px; font-weight:600;}
+.legend{display:flex; flex-direction:column; gap:7px; margin-top:10px;}
+.legend-row{display:flex; align-items:center; gap:8px; font-size:13px;}
+.legend-dot{width:9px; height:9px; border-radius:50%; flex:none;}
+.legend-row .lg-label{flex:1; color:var(--ink-soft); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.legend-row .lg-val{font-size:12.5px; font-weight:600;}
+.chart-wrap{display:flex; gap:22px; flex-wrap:wrap; align-items:center;}
+.chart-wrap svg{flex:none;}
+.section-title{font-size:12.5px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.05em; margin:2px 0 10px; display:flex; align-items:center; gap:7px;}
+.notice{font-size:12.5px; color:var(--ink-soft); background:var(--surface-2); border-radius:9px; padding:10px 12px; border:1px solid var(--border);}
+
+@media (min-width:900px){
+  #app{padding-top:22px;}
+  .shell{display:grid; grid-template-columns:216px 1fr; gap:28px; align-items:start;}
+  .railhead{display:flex; align-items:center; gap:10px; margin-bottom:22px;}
+  .sidenav{flex-direction:column; background:transparent; border:none; padding:0; gap:2px; position:sticky; top:22px;}
+  .navlink{justify-content:flex-start; padding:10px 12px; width:100%;}
+  .topbar .brand{display:none;}
+  .topbar{padding-top:0;}
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="shell">
+    <nav id="sidenav">
+      <div class="railhead">
+        <span class="brand-mark" id="railMark"></span>
+        <div class="brand-text"><span class="eyebrow">Panel personal</span><h1 style="font-size:17px;">Mis Finanzas</h1></div>
+      </div>
+      <div class="sidenav" id="tabs">
+        <button class="navlink active" data-tab="resumen"></button>
+        <button class="navlink" data-tab="movimientos"></button>
+        <button class="navlink" data-tab="presupuestos"></button>
+        <button class="navlink" data-tab="metas"></button>
+      </div>
+    </nav>
+
+    <div>
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" id="topMark"></span>
+          <div class="brand-text"><span class="eyebrow">Panel personal</span><h1>Mis Finanzas</h1></div>
+        </div>
+        <div class="balance-chip">
+          <span class="label">Saldo total</span>
+          <span class="value num" id="totalBalance">$0</span>
+        </div>
+      </header>
+
+      <main id="views">
+        <section id="view-resumen" class="view active">
+          <div class="stat-grid">
+            <div class="stat-tile income">
+              <div class="stat-top"><span class="label">Ingresos del mes</span><span class="stat-badge" id="iconIncome"></span></div>
+              <span class="amount num" id="statIncome">$0</span>
+            </div>
+            <div class="stat-tile expense">
+              <div class="stat-top"><span class="label">Gastos del mes</span><span class="stat-badge" id="iconExpense"></span></div>
+              <span class="amount num" id="statExpense">$0</span>
+            </div>
+            <div class="stat-tile net">
+              <div class="stat-top"><span class="label">Balance del mes</span><span class="stat-badge" id="iconNet"></span></div>
+              <span class="amount num" id="statNet">$0</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><div><h2>Gastos por categoría</h2><p class="sub">Este mes, hasta hoy.</p></div></div>
+            <div id="donutWrap" style="margin-top:14px;"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><div><h2>Últimos 6 meses</h2><p class="sub">Ingresos contra gastos, mes a mes.</p></div></div>
+            <div id="barWrap" style="margin-top:14px;"></div>
+          </div>
+
+          <div class="card">
+            <h2>Movimientos recientes</h2>
+            <div id="recentList" style="margin-top:10px;"></div>
+          </div>
+        </section>
+
+        <section id="view-movimientos" class="view">
+          <div class="card">
+            <h2>Agregar movimiento</h2>
+            <form id="txForm" style="margin-top:14px; display:flex; flex-direction:column; gap:11px;">
+              <div class="form-row">
+                <div class="type-toggle" role="group" aria-label="Tipo">
+                  <button type="button" class="active" data-t="expense">Gasto</button>
+                  <button type="button" data-t="income">Ingreso</button>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="field"><label for="txAmount">Monto</label><input id="txAmount" type="number" min="0" step="0.01" placeholder="0" required></div>
+                <div class="field"><label for="txCategory">Categoría</label><select id="txCategory"></select></div>
+                <div class="field"><label for="txDate">Fecha</label><input id="txDate" type="date" required></div>
+              </div>
+              <div class="form-row">
+                <div class="field" style="flex:1 1 260px;"><label for="txNote">Nota (opcional)</label><input id="txNote" type="text" placeholder="Ej: supermercado del sábado" maxlength="80"></div>
+              </div>
+              <div><button type="submit" class="btn" id="txSubmit">Agregar movimiento</button></div>
+            </form>
+          </div>
+
+          <div class="card">
+            <h2>Historial</h2>
+            <div id="txList" style="margin-top:10px;"></div>
+          </div>
+        </section>
+
+        <section id="view-presupuestos" class="view">
+          <div class="card">
+            <h2>Presupuestos por categoría</h2>
+            <p class="sub">Definí un límite mensual por categoría de gasto y seguí cuánto llevás usado.</p>
+            <div id="budgetList" style="margin-top:12px;"></div>
+          </div>
+        </section>
+
+        <section id="view-metas" class="view">
+          <div class="card">
+            <h2>Nueva meta</h2>
+            <form id="goalForm" style="margin-top:14px; display:flex; flex-direction:column; gap:11px;">
+              <div class="form-row">
+                <div class="type-toggle" role="group" aria-label="Tipo de meta">
+                  <button type="button" class="active" data-g="saving">Ahorro</button>
+                  <button type="button" data-g="debt">Deuda</button>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="field" style="flex:1 1 220px;"><label for="goalName">Nombre</label><input id="goalName" type="text" placeholder="Ej: Fondo de emergencia" required maxlength="60"></div>
+                <div class="field"><label for="goalTarget">Monto objetivo</label><input id="goalTarget" type="number" min="1" step="0.01" placeholder="0" required></div>
+                <div class="field"><label for="goalCurrent">Ya tenés / ya pagaste</label><input id="goalCurrent" type="number" min="0" step="0.01" placeholder="0"></div>
+              </div>
+              <div><button type="submit" class="btn">Crear meta</button></div>
+            </form>
+          </div>
+
+          <div class="card">
+            <div class="section-title" id="savingsTitle">Ahorros</div>
+            <div id="savingsList" style="display:flex; flex-direction:column; gap:10px;"></div>
+          </div>
+
+          <div class="card">
+            <div class="section-title" id="debtsTitle">Deudas</div>
+            <div id="debtsList" style="display:flex; flex-direction:column; gap:10px;"></div>
+          </div>
+        </section>
+      </main>
+
+      <p class="notice" id="storageNotice" style="margin-top:16px; display:none;"></p>
+    </div>
+  </div>
+</div>
+
+<script src="store.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
