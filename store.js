@@ -106,6 +106,10 @@
       channels = {}; cache = {}; client = null; userId = null; ready = false; Store.available = false;
     },
 
+    // Cada escritura vuelve a leer y avisa a los que escuchan ella misma
+    // (no depende de que llegue el evento de Realtime, que puede tardar o no
+    // estar habilitado): así el propio dispositivo se actualiza al instante.
+
     add: function (collection, data) {
       if (!ready) return Promise.reject(new Error("not_ready"));
       var cfg = TABLES[collection];
@@ -113,7 +117,8 @@
       row.user_id = userId;
       return client.from(cfg.table).insert(row).select().single().then(function (res) {
         if (res.error) throw res.error;
-        return docFromRow(collection, res.data);
+        var doc = docFromRow(collection, res.data);
+        return refetch(collection).then(function () { return doc; });
       });
     },
 
@@ -125,6 +130,7 @@
       row[cfg.idCol] = id;
       return client.from(cfg.table).upsert(row, { onConflict: "user_id," + cfg.idCol }).then(function (res) {
         if (res.error) throw res.error;
+        return refetch(collection);
       });
     },
 
@@ -133,6 +139,7 @@
       var cfg = TABLES[collection];
       return client.from(cfg.table).update(partial).eq(cfg.idCol, id).eq("user_id", userId).then(function (res) {
         if (res.error) throw res.error;
+        return refetch(collection);
       });
     },
 
@@ -141,6 +148,7 @@
       var cfg = TABLES[collection];
       return client.from(cfg.table).delete().eq(cfg.idCol, id).eq("user_id", userId).then(function (res) {
         if (res.error) throw res.error;
+        return refetch(collection);
       });
     },
 
