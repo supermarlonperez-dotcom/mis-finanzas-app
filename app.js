@@ -631,13 +631,6 @@
   });
 
   // ---------- storage wiring ----------
-  if (!Store.available){
-    document.getElementById('txSubmit').disabled = true;
-    var notice = document.getElementById('storageNotice');
-    notice.style.display = 'block';
-    notice.textContent = 'El navegador está bloqueando el guardado local (modo privado o almacenamiento deshabilitado). Los datos no se van a guardar en esta sesión.';
-  }
-
   Store.subscribe('transactions', function(list){
     state.transactions = list;
     renderSummary();
