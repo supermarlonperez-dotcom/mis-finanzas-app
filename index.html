@@ -191,9 +191,28 @@ input,select{font-family:var(--font-body);}
   background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:9px 10px; color:var(--ink); font-size:16px;
   width:100%; transition:border-color .15s ease;
 }
-.field select{color-scheme:inherit;}
-.field select option{background:var(--surface-solid); color:var(--ink);}
-.field input:hover, .field select:hover{border-color:var(--ink-faint);}
+.field input:hover{border-color:var(--ink-faint);}
+
+/* custom dropdown (replaces native <select> so option styling is 100% reliable) ------------------------------------------------------ */
+.dropdown{position:relative;}
+.dropdown-btn{
+  display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%;
+  background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:9px 10px; color:var(--ink); font-size:16px;
+  font-family:var(--font-body); cursor:pointer; text-align:left; transition:border-color .15s ease;
+}
+.dropdown-btn:hover{border-color:var(--ink-faint);}
+.dropdown-btn-content{display:flex; align-items:center; gap:8px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.dropdown-btn-content .icon{color:var(--ink-soft); flex:none;}
+.dropdown-chevron{flex:none; color:var(--ink-soft); transition:transform .15s ease;}
+.dropdown.open .dropdown-chevron{transform:rotate(180deg);}
+.dropdown-list{
+  position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:15;
+  background:var(--surface-solid); border:1px solid var(--border); border-radius:12px; padding:6px;
+  box-shadow:var(--shadow-lift); max-height:264px; overflow-y:auto; list-style:none; margin:0;
+}
+.dropdown-item{display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:8px; font-size:15px; color:var(--ink); cursor:pointer;}
+.dropdown-item .icon{color:var(--ink-soft); flex:none;}
+.dropdown-item:hover, .dropdown-item.active{background:var(--surface-2);}
 .btn{
   border:none; border-radius:11px; padding:10px 18px; font-size:14px; font-weight:700;
   background:linear-gradient(135deg, var(--accent), var(--accent-2)); color:#04211D;
@@ -468,7 +487,16 @@ input,select{font-family:var(--font-body);}
           </div>
           <div class="form-row">
             <div class="field"><label for="txAmount">Monto</label><input id="txAmount" type="number" min="0" step="0.01" placeholder="0" required></div>
-            <div class="field"><label for="txCategory">Categoría</label><select id="txCategory"></select></div>
+            <div class="field">
+              <label id="txCategoryLabel">Categoría</label>
+              <div class="dropdown" id="txCategoryDropdown">
+                <button type="button" class="dropdown-btn" id="txCategoryBtn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="txCategoryLabel">
+                  <span class="dropdown-btn-content" id="txCategorySelected"></span>
+                  <svg class="dropdown-chevron" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 8l4.5 4.5L14.5 8"/></svg>
+                </button>
+                <ul class="dropdown-list" id="txCategoryList" role="listbox" tabindex="-1" hidden></ul>
+              </div>
+            </div>
             <div class="field"><label for="txDate">Fecha</label><input id="txDate" type="date" required></div>
           </div>
           <div class="form-row">

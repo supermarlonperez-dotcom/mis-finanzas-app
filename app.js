@@ -181,11 +181,55 @@
   });
 
   // ---------- transaction form ----------
-  var txCategorySel = document.getElementById('txCategory');
+  // Menú de categoría propio (no <select> nativo): los navegadores no pintan
+  // de forma confiable el fondo/color de las opciones de un select nativo,
+  // así que armamos el desplegable a mano para controlarlo del todo.
+  var catDropdown = document.getElementById('txCategoryDropdown');
+  var catBtn = document.getElementById('txCategoryBtn');
+  var catSelected = document.getElementById('txCategorySelected');
+  var catList = document.getElementById('txCategoryList');
+  state.txCategory = 'comida';
+
+  function catButtonHTML(c){ return icon(c.icon, 16) + '<span>' + c.label + '</span>'; }
+
   function refreshTxCategories(){
     var list = state.txType === 'income' ? INCOME_CATS : EXPENSE_CATS;
-    txCategorySel.innerHTML = list.map(function(c){ return '<option value="'+c.id+'">'+c.label+'</option>'; }).join('');
+    if (!list.some(function(c){ return c.id === state.txCategory; })) state.txCategory = list[0].id;
+    catList.innerHTML = list.map(function(c){
+      return '<li class="dropdown-item'+(c.id===state.txCategory?' active':'')+'" role="option" aria-selected="'+(c.id===state.txCategory)+'" data-cat="'+c.id+'">'+catButtonHTML(c)+'</li>';
+    }).join('');
+    var current = findCat(state.txType, state.txCategory);
+    catSelected.innerHTML = catButtonHTML(current);
   }
+
+  function closeCatDropdown(){
+    catDropdown.classList.remove('open');
+    catList.hidden = true;
+    catBtn.setAttribute('aria-expanded', 'false');
+  }
+  function openCatDropdown(){
+    catDropdown.classList.add('open');
+    catList.hidden = false;
+    catBtn.setAttribute('aria-expanded', 'true');
+  }
+  catBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    if (catList.hidden) openCatDropdown(); else closeCatDropdown();
+  });
+  catList.addEventListener('click', function(e){
+    var item = e.target.closest('[data-cat]');
+    if (!item) return;
+    state.txCategory = item.dataset.cat;
+    refreshTxCategories();
+    closeCatDropdown();
+  });
+  document.addEventListener('click', function(e){
+    if (!catDropdown.contains(e.target)) closeCatDropdown();
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') closeCatDropdown();
+  });
+
   document.querySelectorAll('#txForm .type-toggle button').forEach(function(btn){
     btn.addEventListener('click', function(){
       document.querySelectorAll('#txForm .type-toggle button').forEach(function(b){ b.classList.remove('active'); });
@@ -205,7 +249,7 @@
     var payload = {
       type: state.txType,
       amount: amount,
-      category: txCategorySel.value,
+      category: state.txCategory,
       note: document.getElementById('txNote').value.slice(0,80),
       date: document.getElementById('txDate').value || todayISO(),
       createdAt: Date.now()
