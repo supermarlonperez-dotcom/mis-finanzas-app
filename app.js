@@ -202,15 +202,26 @@
     catSelected.innerHTML = catButtonHTML(current);
   }
 
+  // La barra flotante de navegación de abajo es "position:fixed" con su propio
+  // z-index a nivel de página: aunque la lista tenga un z-index más alto por
+  // dentro de la tarjeta, eso no le gana a un elemento fixed hermano. Se oculta
+  // mientras la lista está abierta para que no le robe los clics de las
+  // últimas categorías.
+  var bottomNavEl = document.getElementById('bottomnav');
+  var catCard = catDropdown.closest('.card');
   function closeCatDropdown(){
     catDropdown.classList.remove('open');
     catList.hidden = true;
     catBtn.setAttribute('aria-expanded', 'false');
+    if (bottomNavEl) bottomNavEl.classList.remove('nav-hidden');
+    if (catCard) catCard.classList.remove('card-lift');
   }
   function openCatDropdown(){
     catDropdown.classList.add('open');
     catList.hidden = false;
     catBtn.setAttribute('aria-expanded', 'true');
+    if (bottomNavEl) bottomNavEl.classList.add('nav-hidden');
+    if (catCard) catCard.classList.add('card-lift');
   }
   catBtn.addEventListener('click', function(e){
     e.stopPropagation();
