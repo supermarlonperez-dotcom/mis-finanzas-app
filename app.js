@@ -209,9 +209,11 @@
   // últimas categorías.
   var bottomNavEl = document.getElementById('bottomnav');
   var catCard = catDropdown.closest('.card');
+  var catBackdrop = document.getElementById('txCategoryBackdrop');
   function closeCatDropdown(){
     catDropdown.classList.remove('open');
     catList.hidden = true;
+    catBackdrop.hidden = true;
     catBtn.setAttribute('aria-expanded', 'false');
     if (bottomNavEl) bottomNavEl.classList.remove('nav-hidden');
     if (catCard) catCard.classList.remove('card-lift');
@@ -219,6 +221,7 @@
   function openCatDropdown(){
     catDropdown.classList.add('open');
     catList.hidden = false;
+    catBackdrop.hidden = false;
     catBtn.setAttribute('aria-expanded', 'true');
     if (bottomNavEl) bottomNavEl.classList.add('nav-hidden');
     if (catCard) catCard.classList.add('card-lift');
@@ -234,6 +237,7 @@
     refreshTxCategories();
     closeCatDropdown();
   });
+  catBackdrop.addEventListener('click', closeCatDropdown);
   document.addEventListener('click', function(e){
     if (!catDropdown.contains(e.target)) closeCatDropdown();
   });
