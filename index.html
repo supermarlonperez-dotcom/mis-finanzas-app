@@ -68,6 +68,7 @@
   color-scheme: light;
 }
 *{box-sizing:border-box;}
+[hidden]{display:none !important;}
 html,body{height:100%;}
 body{
   background:var(--bg); color:var(--ink); font-family:var(--font-body); margin:0;
@@ -315,6 +316,8 @@ input,select{font-family:var(--font-body);}
 .auth-brand h1{font-size:19px; font-weight:700;}
 .auth-sub{font-size:12.5px; color:var(--ink-soft); margin-top:9px; line-height:1.5;}
 .auth-msg{font-size:12.5px; margin-top:12px; min-height:16px; line-height:1.5;}
+.auth-link{display:block; margin-top:14px; background:none; border:none; padding:0; font-size:12.5px; color:var(--accent-2); font-weight:600; cursor:pointer; text-align:left;}
+.auth-link:hover{text-decoration:underline;}
 .auth-msg.error{color:var(--negative);}
 .auth-msg.ok{color:var(--positive);}
 .user-chip{display:none; align-items:center; gap:9px; font-size:12px; color:var(--ink-soft);}
@@ -394,19 +397,34 @@ input,select{font-family:var(--font-body);}
       <span class="brand-mark" id="authMark"></span>
       <h1>Mis Finanzas</h1>
     </div>
-    <p class="auth-sub">Iniciá sesión para ver tus datos, sincronizados entre todos tus dispositivos.</p>
 
-    <div class="type-toggle" role="group" aria-label="Modo" style="margin-top:18px;">
-      <button type="button" class="active" data-mode="signin">Iniciar sesión</button>
-      <button type="button" data-mode="signup">Crear cuenta</button>
+    <div id="authPanel">
+      <p class="auth-sub" id="authSub">Iniciá sesión para ver tus datos, sincronizados entre todos tus dispositivos.</p>
+
+      <div class="type-toggle" role="group" aria-label="Modo" style="margin-top:18px;" id="authModeToggle">
+        <button type="button" class="active" data-mode="signin">Iniciar sesión</button>
+        <button type="button" data-mode="signup">Crear cuenta</button>
+      </div>
+
+      <form id="authForm" style="margin-top:16px; display:flex; flex-direction:column; gap:11px;">
+        <div class="field"><label for="authEmail">Email</label><input id="authEmail" type="email" required placeholder="vos@ejemplo.com" autocomplete="email"></div>
+        <div class="field" id="authPasswordField"><label for="authPassword">Contraseña</label><input id="authPassword" type="password" required minlength="6" placeholder="Mínimo 6 caracteres" autocomplete="current-password"></div>
+        <button type="submit" class="btn" id="authSubmit">Iniciar sesión</button>
+      </form>
+      <button type="button" class="auth-link" id="forgotLink">¿Olvidaste tu contraseña?</button>
+      <button type="button" class="auth-link" id="backToSigninLink" hidden>← Volver a iniciar sesión</button>
+      <p class="auth-msg" id="authMsg"></p>
     </div>
 
-    <form id="authForm" style="margin-top:16px; display:flex; flex-direction:column; gap:11px;">
-      <div class="field"><label for="authEmail">Email</label><input id="authEmail" type="email" required placeholder="vos@ejemplo.com" autocomplete="email"></div>
-      <div class="field"><label for="authPassword">Contraseña</label><input id="authPassword" type="password" required minlength="6" placeholder="Mínimo 6 caracteres" autocomplete="current-password"></div>
-      <button type="submit" class="btn" id="authSubmit">Iniciar sesión</button>
-    </form>
-    <p class="auth-msg" id="authMsg"></p>
+    <div id="resetPanel" hidden>
+      <p class="auth-sub">Entraste desde un link de recuperación. Elegí tu nueva contraseña.</p>
+      <form id="resetForm" style="margin-top:16px; display:flex; flex-direction:column; gap:11px;">
+        <div class="field"><label for="resetPassword">Nueva contraseña</label><input id="resetPassword" type="password" required minlength="6" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
+        <div class="field"><label for="resetPassword2">Repetir contraseña</label><input id="resetPassword2" type="password" required minlength="6" placeholder="Repetila" autocomplete="new-password"></div>
+        <button type="submit" class="btn">Guardar nueva contraseña</button>
+      </form>
+      <p class="auth-msg" id="resetMsg"></p>
+    </div>
   </div>
 </div>
 

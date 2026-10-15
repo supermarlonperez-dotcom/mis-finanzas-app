@@ -19,20 +19,51 @@
   var appEl = document.getElementById("app");
   var userChip = document.getElementById("userChip");
   var userEmail = document.getElementById("userEmail");
+  var authPanel = document.getElementById("authPanel");
+  var resetPanel = document.getElementById("resetPanel");
+  var authSub = document.getElementById("authSub");
+  var modeToggle = document.getElementById("authModeToggle");
+  var passwordField = document.getElementById("authPasswordField");
+  var forgotLink = document.getElementById("forgotLink");
+  var backToSigninLink = document.getElementById("backToSigninLink");
   var msgEl = document.getElementById("authMsg");
   var submitBtn = document.getElementById("authSubmit");
   var mode = "signin";
 
-  document.querySelectorAll('[data-mode]').forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      document.querySelectorAll('[data-mode]').forEach(function (b) { b.classList.remove("active"); });
-      btn.classList.add("active");
-      mode = btn.dataset.mode;
+  // Si el link del correo de recuperación ya trae el token en la URL, no
+  // mostrar ni por un instante la app o el login normal: nos quedamos en
+  // "Cargando…" hasta que llegue el evento PASSWORD_RECOVERY.
+  var arrivingFromRecoveryLink = /type=recovery/.test(window.location.hash);
+
+  function setMode(next){
+    mode = next;
+    document.querySelectorAll('[data-mode]').forEach(function (b) { b.classList.toggle("active", b.dataset.mode === mode); });
+    msgEl.className = "auth-msg";
+    msgEl.textContent = "";
+    if (mode === "forgot") {
+      modeToggle.hidden = true;
+      passwordField.style.display = "none";
+      document.getElementById("authPassword").required = false;
+      forgotLink.hidden = true;
+      backToSigninLink.hidden = false;
+      authSub.textContent = "Poné tu email y te mandamos un link para elegir una contraseña nueva.";
+      submitBtn.textContent = "Enviar link de recuperación";
+    } else {
+      modeToggle.hidden = false;
+      passwordField.style.display = "";
+      document.getElementById("authPassword").required = true;
+      forgotLink.hidden = false;
+      backToSigninLink.hidden = true;
+      authSub.textContent = "Iniciá sesión para ver tus datos, sincronizados entre todos tus dispositivos.";
       submitBtn.textContent = mode === "signup" ? "Crear cuenta" : "Iniciar sesión";
-      msgEl.className = "auth-msg";
-      msgEl.textContent = "";
-    });
+    }
+  }
+
+  document.querySelectorAll('[data-mode]').forEach(function (btn) {
+    btn.addEventListener("click", function () { setMode(btn.dataset.mode); });
   });
+  forgotLink.addEventListener("click", function () { setMode("forgot"); });
+  backToSigninLink.addEventListener("click", function () { setMode("signin"); });
 
   function translateError(message) {
     if (/already registered|already exists/i.test(message)) return "Ese email ya tiene una cuenta. Probá iniciar sesión.";
@@ -40,6 +71,7 @@
     if (/password should be at least/i.test(message)) return "La contraseña debe tener al menos 6 caracteres.";
     if (/email not confirmed/i.test(message)) return "Confirmá tu email antes de iniciar sesión (revisá tu correo, incluida la carpeta de spam).";
     if (/unable to validate email/i.test(message)) return "Ese email no es válido.";
+    if (/same password/i.test(message)) return "Esa es la misma contraseña que ya tenías. Elegí una distinta.";
     return message;
   }
 
@@ -50,6 +82,24 @@
     msgEl.className = "auth-msg";
     msgEl.textContent = "";
     submitBtn.disabled = true;
+
+    if (mode === "forgot") {
+      sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname }).then(function (res) {
+        submitBtn.disabled = false;
+        if (res.error) {
+          msgEl.className = "auth-msg error";
+          msgEl.textContent = translateError(res.error.message);
+          return;
+        }
+        msgEl.className = "auth-msg ok";
+        msgEl.textContent = "Listo. Si ese email tiene cuenta, le va a llegar un link para elegir contraseña nueva (revisá spam también).";
+      })["catch"](function () {
+        submitBtn.disabled = false;
+        msgEl.className = "auth-msg error";
+        msgEl.textContent = "Error de conexión. Probá de nuevo.";
+      });
+      return;
+    }
 
     var action = mode === "signup"
       ? sb.auth.signUp({ email: email, password: password })
@@ -75,6 +125,39 @@
     });
   });
 
+  var resetMsgEl = document.getElementById("resetMsg");
+  document.getElementById("resetForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var p1 = document.getElementById("resetPassword").value;
+    var p2 = document.getElementById("resetPassword2").value;
+    resetMsgEl.className = "auth-msg";
+    resetMsgEl.textContent = "";
+    if (p1 !== p2) {
+      resetMsgEl.className = "auth-msg error";
+      resetMsgEl.textContent = "Las dos contraseñas no coinciden.";
+      return;
+    }
+    var btn = e.target.querySelector("button[type=submit]");
+    btn.disabled = true;
+    sb.auth.updateUser({ password: p1 }).then(function (res) {
+      btn.disabled = false;
+      if (res.error) {
+        resetMsgEl.className = "auth-msg error";
+        resetMsgEl.textContent = translateError(res.error.message);
+        return;
+      }
+      window.history.replaceState(null, "", window.location.pathname);
+      sb.auth.getSession().then(function (r) {
+        var session = r.data && r.data.session;
+        if (session) showApp(session); else showAuth();
+      });
+    })["catch"](function () {
+      btn.disabled = false;
+      resetMsgEl.className = "auth-msg error";
+      resetMsgEl.textContent = "Error de conexión. Probá de nuevo.";
+    });
+  });
+
   document.getElementById("logoutBtn").addEventListener("click", function () {
     sb.auth.signOut();
   });
@@ -93,15 +176,34 @@
     appEl.style.display = "none";
     userChip.style.display = "none";
     authEl.style.display = "flex";
+    authPanel.hidden = false;
+    resetPanel.hidden = true;
+    setMode("signin");
     window.Store.disconnect();
   }
 
-  sb.auth.getSession().then(function (res) {
-    var session = res.data && res.data.session;
-    if (session) showApp(session); else showAuth();
-  });
+  function showResetPassword() {
+    loadingEl.style.display = "none";
+    appEl.style.display = "none";
+    userChip.style.display = "none";
+    authEl.style.display = "flex";
+    authPanel.hidden = true;
+    resetPanel.hidden = false;
+  }
 
-  sb.auth.onAuthStateChange(function (_event, session) {
+  if (!arrivingFromRecoveryLink) {
+    sb.auth.getSession().then(function (res) {
+      var session = res.data && res.data.session;
+      if (session) showApp(session); else showAuth();
+    });
+  }
+
+  sb.auth.onAuthStateChange(function (event, session) {
+    if (event === "PASSWORD_RECOVERY") {
+      showResetPassword();
+      return;
+    }
+    if (resetPanel && !resetPanel.hidden) return; // ya está eligiendo la nueva contraseña, no la interrumpas
     if (session) showApp(session); else showAuth();
   });
 })();
